@@ -17,7 +17,7 @@ import Auth from './assets/components/Auth.jsx'; // LOGIN
 import * as api from './api.js';
 
 function App() {
-  // --- 1. GESTIÓN DE USUARIO (AUTH) ---
+  // --- 1. GESTIÓN DE SESIÓN ---
   const [user, setUser] = useState(() => {
       const savedUser = localStorage.getItem('mywallet_user');
       return savedUser ? JSON.parse(savedUser) : null;
@@ -33,9 +33,6 @@ function App() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalType, setModalType] = useState('budget');
   const [editingData, setEditingData] = useState(null); 
-
-  // --- NUEVO ESTADO PARA VISIBILIDAD DEL SIDEBAR (Mobile/Desktop) ---
-  const [isSidebarVisible, setIsSidebarVisible] = useState(true); 
 
   // --- 2. ESTADOS DE DATOS (Inician vacíos, se llenan desde MongoDB) ---
   const [tarjetas, setTarjetas] = useState([]);
@@ -76,7 +73,6 @@ function App() {
 
           // Seleccionar el último periodo creado por defecto para el dashboard
           if (periodsData.length > 0 && !dashboardPeriodId) {
-              // Usamos el _id de MongoDB
               setDashboardPeriodId(periodsData[periodsData.length - 1]._id);
           }
       } catch (error) {
@@ -96,7 +92,7 @@ function App() {
   const dashboardBalance = dashboardBudget - dashboardSpent;
   const dashboardMovements = currentDashboardPeriod ? [...currentDashboardPeriod.movements].reverse().slice(0, 3) : [];
 
-  // --- 5. LOGOUT Y SIDEBAR TOGGLE ---
+  // --- 5. LOGOUT ---
   useEffect(() => {
       if (user) localStorage.setItem('mywallet_user', JSON.stringify(user));
       else localStorage.removeItem('mywallet_user');
@@ -105,12 +101,10 @@ function App() {
   const handleLogin = (userData) => { setUser(userData); };
   const handleLogout = () => { if(confirm("¿Cerrar sesión?")) setUser(null); };
 
+  // --- NUEVA FUNCIÓN: CERRAR SIDEBAR Y VOLVER A INICIO ---
   const handleSidebarClick = () => {
-      // 1. Navegar a Inicio (Dashboard)
       setActiveTab('dashboard'); 
       setSelectedPeriodId(null);
-      // 2. Ocultar/Mostrar el sidebar (UX móvil)
-      setIsSidebarVisible(prev => !prev);
   }
 
   // --- 6. LÓGICA DE GUARDADO (CONECTADA AL BACKEND) ---
@@ -212,10 +206,9 @@ function App() {
     }
   };
 
-  // --- HANDLERS (CRUD) ---
+  // --- HANDLERS ---
   const handleAddCard = () => openModal('card');
   const handleEditCard = (card) => { setEditingData(card); setModalType('edit-card'); setIsModalOpen(true); };
-  
   const handleDeleteCard = async (id) => { 
       if(!confirm("¿Eliminar esta tarjeta?")) return;
       setIsLoading(true);
@@ -225,35 +218,15 @@ function App() {
       } catch (e) { console.error(e); }
       setIsLoading(false);
   };
-  
   const handleCardExpense = (card) => { setEditingData(card); setModalType('card-expense'); setIsModalOpen(true); };
   const handleCardPayment = (card) => { setEditingData(card); setModalType('card-payment'); setIsModalOpen(true); };
-  
   const openModal = (type) => { setModalType(type); setEditingData(null); setIsModalOpen(true); setMenuAbierto(false); };
   const openEditModal = (periodToEdit) => { setModalType('edit-budget'); setEditingData(periodToEdit); setIsModalOpen(true); };
-  
-  const deleteMovement = async (periodId, movementId) => { 
-      if (!confirm("¿Borrar movimiento?")) return; 
-      setIsLoading(true); 
-      try { 
-          const period = periods.find(p => p._id === periodId); 
-          if (period) { 
-              const movement = period.movements.find(m => m._id === movementId); 
-              if (movement) { 
-                  let newSpent = period.spent; let newBudget = period.budget; 
-                  if (movement.type === 'expense') newSpent -= movement.amount; else if (movement.type === 'income') newBudget -= movement.amount; 
-                  const updatedPeriodData = { ...period, spent: Math.max(0, newSpent), budget: newBudget, movements: period.movements.filter(m => m._id !== movementId) }; 
-                  const res = await api.updatePeriod(periodId, updatedPeriodData); 
-                  setPeriods(periods.map(p => p._id === periodId ? res : p)); 
-              } 
-          } 
-      } catch(e) { console.error(e); } finally { setIsLoading(false); } 
-  };
-
+  const deleteMovement = async (periodId, movementId) => { if (!confirm("¿Borrar movimiento?")) return; setIsLoading(true); try { const period = periods.find(p => p._id === periodId); if (period) { const movement = period.movements.find(m => m._id === movementId); if (movement) { let newSpent = period.spent; let newBudget = period.budget; if (movement.type === 'expense') newSpent -= movement.amount; else if (movement.type === 'income') newBudget -= movement.amount; const updatedPeriodData = { ...period, spent: Math.max(0, newSpent), budget: newBudget, movements: period.movements.filter(m => m._id !== movementId) }; const res = await api.updatePeriod(periodId, updatedPeriodData); setPeriods(periods.map(p => p._id === periodId ? res : p)); } } } catch(e) { console.error(e); } finally { setIsLoading(false); } };
   const handleAddWidget = async (type, title) => { const newWidget = { type, title, isFixed: false, order: dashboardWidgets.length }; const updatedList = [...dashboardWidgets, newWidget]; setDashboardWidgets(updatedList); await api.saveWidgets(updatedList); setMenuAbierto(false); setMenuView('main'); };
   const removeDashboardWidget = async (id) => { const newList = dashboardWidgets.filter(w => w._id !== id && w.id !== id); setDashboardWidgets(newList); await api.saveWidgets(newList); };
   const moveWidgetGeneric = async (list, setList, idx, dir) => { const newList = [...list]; const target = dir === 'up' ? idx - 1 : idx + 1; if (target >= 0 && target < newList.length && !newList[target].isFixed) { [newList[idx], newList[target]] = [newList[target], newList[idx]]; setList(newList); await api.saveWidgets(newList); } };
-  const movePeriodWidget = async (pId, idx, dir) => { const pIdx = periods.findIndex(p => p._id === pId); const newP = [...periods]; const w = [...newP[pIdx].widgets]; const t = dir === 'up' ? idx - 1 : idx + 1; if (t >= 0 && t < w.length) { [w[idx], w[t]] = [w[t], w[i]]; newP[pIdx].widgets = w; setPeriods(newP); await api.updatePeriod(pId, { widgets: w }); } };
+  const movePeriodWidget = async (pId, idx, dir) => { const pIdx = periods.findIndex(p => p._id === pId); const newP = [...periods]; const w = [...newP[pIdx].widgets]; const target = dir === 'up' ? idx - 1 : idx + 1; if (t >= 0 && t < w.length) { [w[idx], w[target]] = [w[target], w[idx]]; newP[pIdx].widgets = w; setPeriods(newP); await api.updatePeriod(pId, { widgets: w }); } };
   const removePeriodWidget = async (pId, wId) => { const pIdx = periods.findIndex(p => p._id === pId); const newP = [...periods]; const newWidgets = newP[pIdx].widgets.filter(w => w.id !== wId); newP[pIdx].widgets = newWidgets; setPeriods(newP); await api.updatePeriod(pId, { widgets: newWidgets }); };
   const deletePeriod = async (id) => { if(confirm("¿Eliminar periodo?")) { setIsLoading(true); await api.deletePeriod(id); setPeriods(periods.filter(p => p._id !== id)); if(selectedPeriodId === id) setSelectedPeriodId(null); setIsLoading(false); } };
 
@@ -264,12 +237,11 @@ function App() {
       <div className="flex h-screen bg-gray-50 dark:bg-[#0f172a] transition-colors duration-500 font-sans overflow-hidden">
         
         {/* SIDEBAR */}
-        <aside className={`flex-col justify-between z-40 bg-white dark:bg-[#1e293b] border-r border-gray-200 dark:border-white/5 transition-all duration-300 ${isSidebarVisible ? 'w-20 lg:w-64' : 'w-0'}`}
-        >
+        <aside className="w-20 lg:w-64 bg-white dark:bg-[#1e293b] border-r border-gray-200 dark:border-white/5 flex flex-col justify-between z-40">
            <div>
             {/* LOGO DE WALLET CLICABLE */}
             <div 
-                onClick={handleLogoClick}
+                onClick={handleSidebarClick} // <--- NUEVO EVENTO DE CLIC
                 className="h-20 flex items-center justify-center lg:justify-start lg:px-6 border-b border-gray-100 dark:border-white/5 cursor-pointer"
             >
               <div className="w-10 h-10 bg-emerald-500 rounded-xl flex items-center justify-center text-white shadow-lg">
@@ -284,6 +256,7 @@ function App() {
               <button onClick={() => { setActiveTab('wallet'); setSelectedPeriodId(null); }} className={`w-full flex items-center p-3 rounded-xl transition-all ${activeTab === 'wallet' ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400 font-bold' : 'text-gray-400 hover:bg-gray-50 dark:hover:bg-white/5'}`}><CreditCard size={22} /> <span className="hidden lg:block ml-3">Tarjetas</span></button>
             </nav>
           </div>
+          {/* BOTONES INFERIORES */}
           <div className="p-4 space-y-2">
             <button onClick={() => setIsDarkMode(!isDarkMode)} className="w-full flex items-center justify-center lg:justify-start p-3 rounded-xl text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5">{isDarkMode ? <Sun size={22} /> : <Moon size={22} />}</button>
             <button onClick={handleLogout} className="w-full flex items-center justify-center lg:justify-start p-3 rounded-xl text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors" title="Cerrar Sesión"><LogOut size={22} /> <span className="hidden lg:block ml-3 font-bold">Salir</span></button>
@@ -291,7 +264,6 @@ function App() {
         </aside>
 
         <main className="flex-1 overflow-y-auto relative">
-          
           {/* BARRA DE CARGA */}
           {isLoading && <div className="absolute top-0 left-0 w-full h-1 bg-gray-800 z-50"><div className="h-full bg-emerald-500 animate-pulse w-1/3 mx-auto"></div></div>}
 
@@ -311,10 +283,15 @@ function App() {
             {/* SECCIÓN 1: DASHBOARD */}
             {activeTab === 'dashboard' && (
                 <Dashboard 
-                    widgets={dashboardWidgets} totalGastado={totalTarjetaGastado} periods={periods} selectedPeriodId={dashboardPeriodId} onSelectPeriod={setDashboardPeriodId}
+                    widgets={dashboardWidgets} 
+                    totalGastado={totalTarjetaGastado} 
+                    
+                    periods={periods} selectedPeriodId={dashboardPeriodId} onSelectPeriod={setDashboardPeriodId}
+                    
                     globalBalance={dashboardBalance} globalIncome={dashboardBudget} globalExpense={dashboardSpent} recentTransactions={dashboardMovements}  
                     onNewExpense={() => openModal('expense')} onNewIncome={() => openModal('income')} onViewCards={() => setActiveTab('wallet')} onViewReport={() => setActiveTab('quincenas')}
-                    moveWidget={(idx, dir) => moveWidgetGeneric(dashboardWidgets, setDashboardWidgets, idx, dir)} removeWidget={removeDashboardWidget} updateWidgetTitle={() => {}} 
+                    moveWidget={(idx, dir) => moveWidgetGeneric(dashboardWidgets, setDashboardWidgets, idx, dir)} 
+                    removeWidget={removeDashboardWidget} updateWidgetTitle={() => {}} 
                 />
             )}
             
@@ -358,7 +335,7 @@ function App() {
                     )}
                     {menuView === 'widgets' && (
                         <div className="animate-fade-in-right">
-                            <div onClick={() => setMenuView('main')} className="flex items-center gap-2 mb-2 p-2 pb-0"><button onClick={() => setMenuView('main')} className="hover:bg-gray-100 dark:hover:bg-slate-700 p-1 rounded-lg"><ChevronLeft size={20} className="text-gray-500"/></button><span className="text-xs font-bold text-gray-400 uppercase tracking-wider">Selecciona Tipo</span></div>
+                            <div className="flex items-center gap-2 mb-2 p-2 pb-0"><button onClick={() => setMenuView('main')} className="hover:bg-gray-100 dark:hover:bg-slate-700 p-1 rounded-lg"><ChevronLeft size={20} className="text-gray-500"/></button><span className="text-xs font-bold text-gray-400 uppercase tracking-wider">Selecciona Tipo</span></div>
                             <div onClick={() => handleAddWidget('recent', 'Últimos Registros')} className="p-3 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-xl cursor-pointer flex items-center gap-3"><div className="bg-orange-100 text-orange-600 p-2 rounded-lg"><List size={18}/></div><div><p className="text-sm font-bold dark:text-white">Resumen</p><p className="text-[10px] text-gray-400">Lista de movimientos</p></div></div>
                             <div onClick={() => handleAddWidget('chart', 'Estructura Gastos')} className="p-3 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-xl cursor-pointer flex items-center gap-3"><div className="bg-indigo-100 text-indigo-600 p-2 rounded-lg"><PieChart size={18}/></div><div><p className="text-sm font-bold dark:text-white">Estructura</p><p className="text-[10px] text-gray-400">Gráfico de pastel</p></div></div>
                         </div>
