@@ -1,5 +1,6 @@
-import mongoose from 'mongoose';
+const mongoose = require('mongoose');
 
+// Sub-esquema para los movimientos (debe ser importado dentro de periodSchema)
 const movementSchema = new mongoose.Schema({
   name: { type: String, required: true },
   amount: { type: Number, required: true },

@@ -1,15 +1,20 @@
-import express from 'express';
-import mongoose from 'mongoose';
-import cors from 'cors';
-import dotenv from 'dotenv';
-import apiRoutes from './routes/api.js';
-import authRoutes from './routes/auth.js';
+const express = require('express'); // Cambiado a require
+const mongoose = require('mongoose'); // Cambiado a require
+const cors = require('cors'); // Cambiado a require
+const dotenv = require('dotenv'); // Cambiado a require
 
+// Rutas y Modelos también deben usar require en sus archivos
+const apiRoutes = require('./routes/api'); 
+const authRoutes = require('./routes/auth');
+
+// Cargar variables de entorno (para MONGO_URI y PORT)
 dotenv.config();
+
 const app = express();
-// Render/servidores en la nube definen su propio puerto
+// Render asigna el puerto (process.env.PORT)
 const PORT = process.env.PORT || 3000; 
-const MONGO_URI = process.env.MONGO_URI; 
+const MONGO_URI = process.env.MONGO_URI; // Variable de Render/local
+
 // URL DE TU FRONTEND EN NETLIFY (Para la solución de CORS)
 const allowedOrigin = 'https://peaceful-melba-99d709.netlify.app';
 
@@ -30,8 +35,8 @@ app.use('/api/auth', authRoutes);
 // Conexión a Base de Datos
 const connectDB = async () => {
     try {
-        // Usamos el link hardcodeado para la conexión (o MONGO_URI si está en .env)
-        await mongoose.connect("mongodb+srv://dennisestudio43_db_user:dhvoxqTs9co3xXOn@cuentas.3fkat1g.mongodb.net/miwallet?appName=cuentas");
+        // Usamos la variable de entorno MONGO_URI (que ya está seteada en Render)
+        await mongoose.connect(MONGO_URI); 
         console.log("✅ Conectado exitosamente a MongoDB Atlas");
     } catch (error) {
         console.error("❌ Error de conexión a MongoDB:", error.message);
@@ -41,7 +46,6 @@ const connectDB = async () => {
 
 // Ruta de prueba
 app.get('/', (req, res) => {
-    // Esta ruta se ejecuta cuando Render comprueba que el servicio está vivo
     res.send('API de Mi Wallet funcionando 🚀');
 });
 

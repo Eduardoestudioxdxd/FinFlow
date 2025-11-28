@@ -1,4 +1,4 @@
-import mongoose from 'mongoose';
+const mongoose = require('mongoose');
 
 const widgetSchema = new mongoose.Schema({
   type: { type: String, required: true },

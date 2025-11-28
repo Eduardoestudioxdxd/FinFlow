@@ -1,7 +1,6 @@
-import express from 'express';
-// CAMBIO CLAVE: Usamos require en lugar de import
-const Card = require('../models/Card'); 
-const Period = require('../models/Period');
+const express = require('express');
+const Card = require('../models/Card');
+const Period = require('..//models/Period');
 const Widget = require('../models/Widget');
 
 const router = express.Router();
@@ -115,4 +114,4 @@ router.post('/widgets', async (req, res) => {
   }
 });
 
-export default router;
+module.exports = router; // Cambiado a module.exports
