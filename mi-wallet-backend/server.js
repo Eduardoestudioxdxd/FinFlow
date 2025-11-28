@@ -1,9 +1,9 @@
-const express = require('express'); // Cambiado a require
-const mongoose = require('mongoose'); // Cambiado a require
-const cors = require('cors'); // Cambiado a require
-const dotenv = require('dotenv'); // Cambiado a require
+const express = require('express');
+const mongoose = require('mongoose');
+const cors = require('cors');
+const dotenv = require('dotenv');
 
-// Rutas y Modelos también deben usar require en sus archivos
+// Rutas y Modelos
 const apiRoutes = require('./routes/api'); 
 const authRoutes = require('./routes/auth');
 
@@ -11,19 +11,29 @@ const authRoutes = require('./routes/auth');
 dotenv.config();
 
 const app = express();
-// Render asigna el puerto (process.env.PORT)
 const PORT = process.env.PORT || 3000; 
-const MONGO_URI = process.env.MONGO_URI; // Variable de Render/local
+const MONGO_URI = process.env.MONGO_URI; 
 
-// URL DE TU FRONTEND EN NETLIFY (Para la solución de CORS)
+// URL DE TU FRONTEND EN NETLIFY (SOLUCIÓN FINAL DE CORS)
 const allowedOrigin = 'https://peaceful-melba-99d709.netlify.app';
 
 // Middlewares
 app.use(express.json());
 
-// CONFIGURACIÓN DE CORS FINAL
+// CONFIGURACIÓN DE CORS FINAL Y DINÁMICA
 app.use(cors({
-    origin: allowedOrigin, 
+    // Permite que la app local, el dominio principal de Netlify, y los subdominios aleatorios se conecten
+    origin: (origin, callback) => {
+        // Permitir peticiones sin origen (como Postman o servidores)
+        if (!origin) return callback(null, true);
+        
+        // Verificar si el origen está en la lista de confianza (incluye Netlify dinámico)
+        if (allowedOrigin.includes(origin) || origin.endsWith('.netlify.app') || origin.includes('localhost')) {
+            callback(null, true);
+        } else {
+            callback(new Error('Not allowed by CORS'), false);
+        }
+    },
     methods: ['GET', 'POST', 'PUT', 'DELETE'],
     credentials: true, 
 }));
