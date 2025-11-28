@@ -17,4 +17,4 @@ const periodSchema = new mongoose.Schema({
   movements: [movementSchema]
 }, { timestamps: true });
 
-export default mongoose.model('Period', periodSchema);
+module.exports = mongoose.model('Period', periodSchema);

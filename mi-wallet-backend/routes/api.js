@@ -1,8 +1,8 @@
 import express from 'express';
-// IMPORTANTE: Aseguramos que los nombres importados coincidan con el export default de Mongoose
-import Card from '../models/Card.js';
-import Period from '../models/Period.js';
-import Widget from '../models/Widget.js';
+// CAMBIO CLAVE: Usamos require en lugar de import
+const Card = require('../models/Card'); 
+const Period = require('../models/Period');
+const Widget = require('../models/Widget');
 
 const router = express.Router();
 

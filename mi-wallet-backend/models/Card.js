@@ -9,4 +9,4 @@ const cardSchema = new mongoose.Schema({
   color: { type: String, default: '#334155' }
 }, { timestamps: true });
 
-export default mongoose.model('Card', cardSchema);
+module.exports = mongoose.model('Card', cardSchema);
