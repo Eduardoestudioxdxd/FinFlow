@@ -17,7 +17,7 @@ import Auth from './assets/components/Auth.jsx'; // LOGIN
 import * as api from './api.js';
 
 function App() {
-  // --- 1. GESTIÓN DE SESIÓN ---
+  // --- 1. GESTIÓN DE USUARIO (AUTH) ---
   const [user, setUser] = useState(() => {
       const savedUser = localStorage.getItem('mywallet_user');
       return savedUser ? JSON.parse(savedUser) : null;
@@ -30,11 +30,11 @@ function App() {
   // UI States
   const [menuAbierto, setMenuAbierto] = useState(false);
   const [menuView, setMenuView] = useState('main'); 
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState('false');
   const [modalType, setModalType] = useState('budget');
   const [editingData, setEditingData] = useState(null); 
 
-  // --- ESTADO PARA VISIBILIDAD DEL SIDEBAR ---
+  // --- RESTAURADO: ESTADO PARA VISIBILIDAD DEL SIDEBAR ---
   const [isSidebarVisible, setIsSidebarVisible] = useState(true); 
 
   // --- 2. ESTADOS DE DATOS (Inician vacíos, se llenan desde MongoDB) ---
@@ -56,9 +56,7 @@ function App() {
       setIsLoading(true);
       try {
           const [cardsData, periodsData, widgetsData] = await Promise.all([
-              api.getCards(),
-              api.getPeriods(),
-              api.getWidgets()
+              api.getCards(), api.getPeriods(), api.getWidgets()
           ]);
 
           setTarjetas(cardsData);
@@ -77,6 +75,7 @@ function App() {
 
   // --- 4. CÁLCULOS GLOBALES ---
   const totalTarjetaGastado = tarjetas.reduce((acc, curr) => acc + curr.gasto, 0);
+  
   const currentDashboardPeriod = periods.find(p => p._id === dashboardPeriodId) || (periods.length > 0 ? periods[0] : null);
   const dashboardBudget = currentDashboardPeriod ? currentDashboardPeriod.budget : 0;
   const dashboardSpent = currentDashboardPeriod ? currentDashboardPeriod.spent : 0;
@@ -96,7 +95,7 @@ function App() {
   const handleSidebarClick = () => {
       setActiveTab('dashboard'); 
       setSelectedPeriodId(null);
-      // TOGGLE: Abre si está cerrado, o cierra si está abierto (para UX móvil)
+      // TOGGLE: Ahora, cuando haces clic, se oculta/muestra
       setIsSidebarVisible(prev => !prev); 
   }
 
@@ -122,13 +121,11 @@ function App() {
                 if (period) {
                     let newSpent = period.spent; let newBudget = period.budget;
                     if (data.type === 'expense' || data.type === 'card-expense') newSpent += data.amount; else if (data.type === 'income') newBudget += data.amount;
-                    let finalName = data.name;
-                    const cardIdUsed = data.cardId || (data.type === 'card-expense' ? editingData?._id : null);
+                    let finalName = data.name; const cardIdUsed = data.cardId || (data.type === 'card-expense' ? editingData?._id : null);
                     if (cardIdUsed) { const c = tarjetas.find(t => t._id === cardIdUsed); if (c) finalName = `${data.name} (${c.nombre})`; }
                     const newMovement = { name: finalName, amount: data.amount, type: data.type === 'card-expense' ? 'expense' : data.type, date: new Date().toLocaleDateString('es-ES', { day: 'numeric', month: 'short' }), iconKey: data.iconKey, cardId: cardIdUsed || '' };
                     const updatedPeriodData = { ...period, budget: newBudget, spent: newSpent, movements: [...period.movements, newMovement] };
-                    const res = await api.updatePeriod(data.periodId, updatedPeriodData);
-                    setPeriods(periods.map(p => p._id === data.periodId ? res : p));
+                    const res = await api.updatePeriod(data.periodId, updatedPeriodData); setPeriods(periods.map(p => p._id === data.periodId ? res : p));
                 }
             }
         }
@@ -144,10 +141,10 @@ function App() {
   const openModal = (type) => { setModalType(type); setEditingData(null); setIsModalOpen(true); setMenuAbierto(false); };
   const openEditModal = (periodToEdit) => { setModalType('edit-budget'); setEditingData(periodToEdit); setIsModalOpen(true); };
   const deleteMovement = async (periodId, movementId) => { if (!confirm("¿Borrar movimiento?")) return; setIsLoading(true); try { const period = periods.find(p => p._id === periodId); if (period) { const movement = period.movements.find(m => m._id === movementId); if (movement) { let newSpent = period.spent; let newBudget = period.budget; if (movement.type === 'expense') newSpent -= movement.amount; else if (movement.type === 'income') newBudget -= movement.amount; const updatedPeriodData = { ...period, spent: Math.max(0, newSpent), budget: newBudget, movements: period.movements.filter(m => m._id !== movementId) }; const res = await api.updatePeriod(periodId, updatedPeriodData); setPeriods(periods.map(p => p._id === periodId ? res : p)); } } } catch(e) { console.error(e); } finally { setIsLoading(false); } };
-  const handleAddWidget = async (type, title) => { const nw = { type, title, isFixed: false, order: dashboardWidgets.length }; const updatedList = [...dashboardWidgets, nw]; setDashboardWidgets(updatedList); await api.saveWidgets(updatedList); setMenuAbierto(false); setMenuView('main'); };
+  const handleAddWidget = async (type, title) => { const newWidget = { type, title, isFixed: false, order: dashboardWidgets.length }; const updatedList = [...dashboardWidgets, newWidget]; setDashboardWidgets(updatedList); await api.saveWidgets(updatedList); setMenuAbierto(false); setMenuView('main'); };
   const removeDashboardWidget = async (id) => { const newList = dashboardWidgets.filter(w => w._id !== id && w.id !== id); setDashboardWidgets(newList); await api.saveWidgets(newList); };
-  const moveWidgetGeneric = async (l, s, i, d) => { const nl = [...l]; const t = d==='up'?i-1:i+1; if (t >= 0 && t < nl.length && !nl[t].isFixed) { [nl[i], nl[t]] = [nl[t], nl[i]]; s(nl); await api.saveWidgets(nl); } };
-  const movePeriodWidget = async (pId, i, d) => { const pIdx = periods.findIndex(p => p._id === pId); const newP = [...periods]; const w = [...newP[pIdx].widgets]; const t = d==='up'?i-1:i+1; if (t >= 0 && t < w.length) { [w[i], w[t]] = [w[t], w[i]]; newP[pIdx].widgets = w; setPeriods(newP); await api.updatePeriod(pId, { widgets: w }); } };
+  const moveWidgetGeneric = async (list, setList, idx, dir) => { const nl = [...list]; const t = dir === 'up' ? idx - 1 : idx + 1; if (t >= 0 && t < nl.length && !nl[t].isFixed) { [nl[idx], nl[target]] = [nl[target], nl[idx]]; setList(nl); await api.saveWidgets(nl); } };
+  const movePeriodWidget = async (pId, idx, dir) => { const pIdx = periods.findIndex(p => p._id === pId); const newP = [...periods]; const w = [...newP[pIdx].widgets]; const t = d==='up'?i-1:i+1; if (t >= 0 && t < w.length) { [w[idx], w[t]] = [w[t], w[i]]; newP[pIdx].widgets = w; setPeriods(newP); await api.updatePeriod(pId, { widgets: w }); } };
   const removePeriodWidget = async (pId, wId) => { const pIdx = periods.findIndex(p => p._id === pId); const newP = [...periods]; const newWidgets = newP[pIdx].widgets.filter(w => w.id !== wId); newP[pIdx].widgets = newWidgets; setPeriods(newP); await api.updatePeriod(pId, { widgets: newWidgets }); };
   const deletePeriod = async (id) => { if(confirm("¿Eliminar periodo?")) { setIsLoading(true); await api.deletePeriod(id); setPeriods(periods.filter(p => p._id !== id)); if(selectedPeriodId === id) setSelectedPeriodId(null); setIsLoading(false); } };
 
@@ -158,10 +155,10 @@ function App() {
       <div className="flex h-screen bg-gray-50 dark:bg-[#0f172a] transition-colors duration-500 font-sans overflow-hidden">
         
         {/* SIDEBAR */}
-        {/* CLASE CONDICIONAL AQUÍ PARA EL COLLAPSE */}
-        <aside className={`flex-col justify-between z-40 bg-white dark:bg-[#1e293b] border-r border-gray-200 dark:border-white/5 transition-all duration-300 ${isSidebarVisible ? 'w-20 lg:w-64' : 'w-0'}`}
+        {/* LA CLASE CONDICIONAL ESTÁ AQUÍ */}
+        <aside className={`flex-col justify-between z-40 bg-white dark:bg-[#1e293b] border-r border-gray-200 dark:border-white/5 transition-all duration-300 ${isSidebarVisible ? 'w-20 lg:w-64' : 'w-0 overflow-hidden'}`}
         >
-           <div className={`flex-col h-full ${!isSidebarVisible ? 'hidden' : 'block'}`}>
+           <div className="flex flex-col h-full"> 
             {/* LOGO DE WALLET CLICABLE */}
             <div 
                 onClick={handleSidebarClick} // TOGGLE VISIBILIDAD
@@ -179,7 +176,8 @@ function App() {
               <button onClick={() => { setActiveTab('wallet'); setSelectedPeriodId(null); }} className={`w-full flex items-center p-3 rounded-xl transition-all ${activeTab === 'wallet' ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400 font-bold' : 'text-gray-400 hover:bg-gray-50 dark:hover:bg-white/5'}`}><CreditCard size={22} /> <span className="hidden lg:block ml-3">Tarjetas</span></button>
             </nav>
           </div>
-          <div className={`p-4 space-y-2 ${!isSidebarVisible ? 'hidden' : 'block'}`}>
+          {/* BOTONES INFERIORES */}
+          <div className="p-4 space-y-2">
             <button onClick={() => setIsDarkMode(!isDarkMode)} className="w-full flex items-center justify-center lg:justify-start p-3 rounded-xl text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5">{isDarkMode ? <Sun size={22} /> : <Moon size={22} />}</button>
             <button onClick={handleLogout} className="w-full flex items-center justify-center lg:justify-start p-3 rounded-xl text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors" title="Cerrar Sesión"><LogOut size={22} /> <span className="hidden lg:block ml-3 font-bold">Salir</span></button>
           </div>
@@ -229,6 +227,7 @@ function App() {
                 </>
             )}
             
+            {/* SECCIÓN 3: TARJETAS */}
             {activeTab === 'wallet' && (
                 <Wallet tarjetas={tarjetas} totalGastado={totalTarjetaGastado} onAddCard={handleAddCard} onEditCard={handleEditCard} onDeleteCard={handleDeleteCard} onCardExpense={handleCardExpense} onCardPayment={handleCardPayment} eliminarTarjeta={()=>{}} modifyingTarjeta={()=>{}} />
             )}
