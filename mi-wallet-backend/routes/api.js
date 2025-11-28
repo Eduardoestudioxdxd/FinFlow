@@ -21,7 +21,7 @@ router.put('/cards/:id', async (req, res) => {
 });
 router.delete('/cards/:id', async (req, res) => {
   await Card.findByIdAndDelete(req.params.id);
-  // CORRECCIÓN: Usamos 204 No Content para la eliminación
+  // CORRECCIÓN CLAVE: Usamos 204 No Content
   res.status(204).send(); 
 });
 
@@ -41,7 +41,7 @@ router.put('/periods/:id', async (req, res) => {
 });
 router.delete('/periods/:id', async (req, res) => {
   await Period.findByIdAndDelete(req.params.id);
-  // ✅ CORRECCIÓN CLAVE: Usamos 204 No Content para eliminación
+  // ✅ CORRECCIÓN CLAVE: Usamos 204 No Content
   res.status(204).send();
 });
 
