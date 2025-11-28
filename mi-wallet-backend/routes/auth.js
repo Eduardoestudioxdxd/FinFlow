@@ -7,15 +7,12 @@ const router = express.Router();
 // REGISTRO
 router.post('/register', async (req, res) => {
   try {
-    // Verificar si existe
     const emailExist = await User.findOne({ email: req.body.email });
     if (emailExist) return res.status(400).json({ message: 'El correo ya existe' });
 
-    // Encriptar contraseña
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(req.body.password, salt);
 
-    // Crear usuario
     const user = new User({
       name: req.body.name,
       email: req.body.email,
@@ -32,15 +29,12 @@ router.post('/register', async (req, res) => {
 // LOGIN
 router.post('/login', async (req, res) => {
   try {
-    // Buscar usuario
     const user = await User.findOne({ email: req.body.email });
     if (!user) return res.status(400).json({ message: 'Correo o contraseña incorrectos' });
 
-    // Verificar contraseña
     const validPass = await bcrypt.compare(req.body.password, user.password);
     if (!validPass) return res.status(400).json({ message: 'Correo o contraseña incorrectos' });
 
-    // Responder éxito
     res.json({ 
         user: user._id, 
         name: user.name, 

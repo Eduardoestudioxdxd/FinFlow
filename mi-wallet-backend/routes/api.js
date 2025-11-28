@@ -1,5 +1,3 @@
-// RUTA: mi-wallet-backend/routes/api.js
-
 import express from 'express';
 import Card from '../models/Card.js';
 import Period from '../models/Period.js';
@@ -7,24 +5,35 @@ import Widget from '../models/Widget.js';
 
 const router = express.Router();
 
-// --- FUNCIÓN MIDDLEWARE DE PROTECCIÓN DE ID (NUEVA) ---
+// --- FUNCIÓN MIDDLEWARE DE PROTECCIÓN DE ID ---
 const getValidId = (req, res, next) => {
     const id = req.params.id;
-    // Si el ID no existe, es nulo o 'undefined', devolvemos error 400
     if (!id || id === 'undefined') {
         return res.status(400).json({ message: "ID de recurso inválido o faltante." });
     }
     next();
 };
 
-// --- RUTAS DE TARJETAS (APLICANDO PROTECCIÓN) ---
+// --- RUTAS DE TARJETAS ---
 
-// ... (getCards, postCards quedan igual) ...
+router.get('/cards', async (req, res) => {
+  const cards = await Card.find();
+  res.json(cards);
+});
+
+router.post('/cards', async (req, res) => {
+  try {
+    const newCard = new Card(req.body);
+    const savedCard = await newCard.save();
+    res.status(201).json(savedCard);
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
+});
 
 // Editar tarjeta
-router.put('/cards/:id', getValidId, async (req, res) => { // Agregamos getValidId
+router.put('/cards/:id', getValidId, async (req, res) => { 
   try {
-    // Nota: findByIdAndUpdate buscará por _id en el cuerpo, que es lo que React le envía como 'id'
     const updatedCard = await Card.findByIdAndUpdate(req.params.id, req.body, { new: true });
     if (!updatedCard) return res.status(404).json({ message: 'Tarjeta no encontrada' });
     res.json(updatedCard);
@@ -34,7 +43,7 @@ router.put('/cards/:id', getValidId, async (req, res) => { // Agregamos getValid
 });
 
 // Eliminar tarjeta
-router.delete('/cards/:id', getValidId, async (req, res) => { // Agregamos getValidId
+router.delete('/cards/:id', getValidId, async (req, res) => { 
   try {
     await Card.findByIdAndDelete(req.params.id);
     res.json({ message: 'Tarjeta eliminada' });
@@ -44,12 +53,25 @@ router.delete('/cards/:id', getValidId, async (req, res) => { // Agregamos getVa
 });
 
 
-// --- RUTAS DE PERIODOS (APLICANDO PROTECCIÓN) ---
+// --- RUTAS DE PERIODOS ---
 
-// ... (getPeriods, postPeriods quedan igual) ...
+router.get('/periods', async (req, res) => {
+  const periods = await Period.find();
+  res.json(periods);
+});
+
+router.post('/periods', async (req, res) => {
+  try {
+    const newPeriod = new Period(req.body);
+    const savedPeriod = await newPeriod.save();
+    res.status(201).json(savedPeriod);
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
+});
 
 // Actualizar periodo
-router.put('/periods/:id', getValidId, async (req, res) => { // Agregamos getValidId
+router.put('/periods/:id', getValidId, async (req, res) => { 
   try {
     const updatedPeriod = await Period.findByIdAndUpdate(req.params.id, req.body, { new: true });
     if (!updatedPeriod) return res.status(404).json({ message: 'Periodo no encontrado' });
@@ -60,7 +82,7 @@ router.put('/periods/:id', getValidId, async (req, res) => { // Agregamos getVal
 });
 
 // Eliminar periodo
-router.delete('/periods/:id', getValidId, async (req, res) => { // Agregamos getValidId
+router.delete('/periods/:id', getValidId, async (req, res) => { 
   try {
     await Period.findByIdAndDelete(req.params.id);
     res.json({ message: 'Periodo eliminado' });
@@ -69,6 +91,31 @@ router.delete('/periods/:id', getValidId, async (req, res) => { // Agregamos get
   }
 });
 
-// ... (Rutas de Widgets quedan igual, no suelen usar parámetros de ID) ...
+
+// --- RUTAS DE WIDGETS ---
+
+router.get('/widgets', async (req, res) => {
+  try {
+    const widgets = await Widget.find().sort({ order: 1 });
+    res.json(widgets);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+router.post('/widgets', async (req, res) => {
+  try {
+    if (Array.isArray(req.body)) {
+        await Widget.deleteMany({});
+        const savedWidgets = await Widget.insertMany(req.body);
+        return res.json(savedWidgets);
+    }
+    const newWidget = new Widget(req.body);
+    const saved = await newWidget.save();
+    res.status(201).json(saved);
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
+});
 
 export default router;
