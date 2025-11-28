@@ -1,7 +1,7 @@
 // src/api.js
 
 // ESTA ES LA LÍNEA QUE FALTABA:
-const API_URL = 'http://localhost:3000/api';
+const API_URL = 'https://finflow-ssbh.onrender.com/api';
 
 // --- TARJETAS ---
 export const getCards = async () => {
