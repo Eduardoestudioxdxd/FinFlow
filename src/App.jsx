@@ -33,7 +33,7 @@ function App() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalType, setModalType] = useState('budget');
   const [editingData, setEditingData] = useState(null); 
-  // NUEVO ESTADO: Controla el menú desplegable del perfil en el Header
+  // ESTADO AÑADIDO: Controla el menú desplegable del perfil en el Header
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
 
   // --- ESTADO PARA VISIBILIDAD DEL SIDEBAR ---
@@ -91,11 +91,11 @@ function App() {
   }, [user]);
 
   const handleLogin = (userData) => { setUser(userData); };
-  // Agregamos lógica para cerrar el menú después de hacer logout
+  // Lógica para cerrar sesión y ocultar el menú de perfil
   const handleLogout = () => { 
     if(confirm("¿Cerrar sesión?")) {
       setUser(null); 
-      setIsUserMenuOpen(false); // Cierra el menú al hacer logout
+      setIsUserMenuOpen(false); // Cierra el menú de perfil si está abierto
     }
   };
 
@@ -249,6 +249,8 @@ function App() {
           {/* BOTONES INFERIORES */}
           <div className="p-4 space-y-2">
             <button onClick={() => setIsDarkMode(!isDarkMode)} className="w-full flex items-center justify-center lg:justify-start p-3 rounded-xl text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5">{isDarkMode ? <Sun size={22} /> : <Moon size={22} />}</button>
+            {/* AHORA SÍ: Botón Salir debajo del modo oscuro/claro */}
+            <button onClick={handleLogout} className="w-full flex items-center justify-center lg:justify-start p-3 rounded-xl text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors" title="Cerrar Sesión"><LogOut size={22} /> <span className="hidden lg:block ml-3 font-bold">Salir</span></button>
           </div>
         </aside>
 
@@ -258,7 +260,7 @@ function App() {
           {isLoading && <div className="absolute top-0 left-0 w-full h-1 bg-gray-800 z-50"><div className="h-full bg-emerald-500 animate-pulse w-1/3 mx-auto"></div></div>}
 
           {/* HEADER */}
-          <header className="h-20 flex items-center justify-between px-8 bg-white/50 dark:bg-[#0f172a]/50 backdrop-blur-sm sticky top-0 z-30">
+          <header className="h-20 flex items-center justify-between px-8 bg-white/50 dark:bg-[#0f172a]/50 backdrop-blur-sm sticky top-0 z-30">
             <div className="flex items-center gap-4">
                 {/* BOTÓN PARA ABRIR EN MÓVIL si está cerrado */}
                 {!isSidebarVisible && (
@@ -269,7 +271,7 @@ function App() {
                 <h2 className="text-2xl font-bold dark:text-white">{activeTab === 'quincenas' && selectedPeriodId ? 'Detalle de Periodo' : activeTab === 'wallet' ? 'Mis Tarjetas' : 'Resumen Financiero'}</h2>
             </div>
             
-            {/* CONTENEDOR DEL PERFIL Y MENÚ DESPLEGABLE */}
+            {/* CONTENEDOR DEL PERFIL Y MENÚ DESPLEGABLE */}
             <div className="relative flex items-center gap-3">
                 <span className="hidden md:block text-sm font-bold dark:text-white text-right">Hola, {user.name}</span>
                 <button onClick={() => setIsUserMenuOpen(prev => !prev)} className="w-10 h-10 rounded-full bg-gradient-to-tr from-emerald-500 to-blue-500 flex items-center justify-center text-white font-bold shadow-lg text-lg ring-2 ring-transparent hover:ring-emerald-400 transition-shadow">
