@@ -17,7 +17,7 @@ import Auth from './assets/components/Auth.jsx'; // LOGIN
 import * as api from './api.js';
 
 function App() {
-  // --- 1. GESTIÓN DE USUARIO (AUTH) ---
+  // --- 1. GESTIÓN DE SESIÓN ---
   const [user, setUser] = useState(() => {
       const savedUser = localStorage.getItem('mywallet_user');
       return savedUser ? JSON.parse(savedUser) : null;
@@ -30,7 +30,7 @@ function App() {
   // UI States
   const [menuAbierto, setMenuAbierto] = useState(false);
   const [menuView, setMenuView] = useState('main'); 
-  const [isModalOpen, setIsModalOpen] = useState('false');
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalType, setModalType] = useState('budget');
   const [editingData, setEditingData] = useState(null); 
 
@@ -75,14 +75,13 @@ function App() {
 
   // --- 4. CÁLCULOS GLOBALES ---
   const totalTarjetaGastado = tarjetas.reduce((acc, curr) => acc + curr.gasto, 0);
-  
   const currentDashboardPeriod = periods.find(p => p._id === dashboardPeriodId) || (periods.length > 0 ? periods[0] : null);
   const dashboardBudget = currentDashboardPeriod ? currentDashboardPeriod.budget : 0;
   const dashboardSpent = currentDashboardPeriod ? currentDashboardPeriod.spent : 0;
   const dashboardBalance = dashboardBudget - dashboardSpent;
   const dashboardMovements = currentDashboardPeriod ? [...currentDashboardPeriod.movements].reverse().slice(0, 3) : [];
 
-  // --- 5. LOGOUT Y SIDEBAR TOGGLE ---
+  // --- 5. LOGOUT ---
   useEffect(() => {
       if (user) localStorage.setItem('mywallet_user', JSON.stringify(user));
       else localStorage.removeItem('mywallet_user');
@@ -91,11 +90,9 @@ function App() {
   const handleLogin = (userData) => { setUser(userData); };
   const handleLogout = () => { if(confirm("¿Cerrar sesión?")) setUser(null); };
 
-  // IMPLEMENTACIÓN DE LA FUNCIÓN DE VISIBILIDAD
+  // IMPLEMENTACIÓN DE LA FUNCIÓN DE VISIBILIDAD (CORREGIDA)
   const handleSidebarClick = () => {
-      setActiveTab('dashboard'); 
-      setSelectedPeriodId(null);
-      // TOGGLE: Ahora, cuando haces clic, se oculta/muestra
+      // CORRECCIÓN: Quitamos la navegación (setActiveTab) para mantener la pestaña actual
       setIsSidebarVisible(prev => !prev); 
   }
 
@@ -111,8 +108,7 @@ function App() {
             if (data.type === 'card-payment' || data.type === 'card-expense' || (data.type === 'expense' && data.cardId)) {
                 const cardIdToUpdate = data.cardId || editingData?._id;
                 const currentCard = tarjetas.find(t => t._id === cardIdToUpdate);
-                if (currentCard) {
-                    let newGasto = currentCard.gasto; if (data.type === 'card-payment') newGasto -= data.amount; else newGasto += data.amount;
+                if (currentCard) { let newGasto = currentCard.gasto; if (data.type === 'card-payment') newGasto -= data.amount; else newGasto += data.amount;
                     const updatedCard = await api.updateCard(cardIdToUpdate, { gasto: newGasto }); setTarjetas(tarjetas.map(t => t._id === cardIdToUpdate ? updatedCard : t));
                 }
             }
@@ -155,10 +151,9 @@ function App() {
       <div className="flex h-screen bg-gray-50 dark:bg-[#0f172a] transition-colors duration-500 font-sans overflow-hidden">
         
         {/* SIDEBAR */}
-        {/* LA CLASE CONDICIONAL ESTÁ AQUÍ */}
         <aside className={`flex-col justify-between z-40 bg-white dark:bg-[#1e293b] border-r border-gray-200 dark:border-white/5 transition-all duration-300 ${isSidebarVisible ? 'w-20 lg:w-64' : 'w-0 overflow-hidden'}`}
         >
-           <div className="flex flex-col h-full"> 
+           <div className="flex flex-col h-full">
             {/* LOGO DE WALLET CLICABLE */}
             <div 
                 onClick={handleSidebarClick} // TOGGLE VISIBILIDAD
