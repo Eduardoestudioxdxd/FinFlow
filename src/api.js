@@ -1,7 +1,7 @@
 // src/api.js
 
-// ESTA ES LA LÍNEA QUE FALTABA:
-const API_URL = 'https://finflow-ssbh.onrender.com/api';
+// --- CORRECCIÓN: ACTUALIZADA LA URL DE BACKEND AL SERVICIO FINAL DE RENDER ---
+const API_URL = 'https://finflow-rnp9.onrender.com/api'; 
 
 // --- TARJETAS ---
 export const getCards = async () => {
@@ -82,7 +82,6 @@ export const registerUser = async (userData) => {
     body: JSON.stringify(userData),
   });
   const data = await res.json();
-  // Si el servidor responde con error (ej. correo duplicado), lanzamos la excepción
   if (!res.ok) throw new Error(data.message || 'Error en el registro');
   return data;
 };
@@ -94,7 +93,6 @@ export const loginUser = async (userData) => {
     body: JSON.stringify(userData),
   });
   const data = await res.json();
-  // Si la contraseña está mal, lanzamos la excepción para que el Frontend la muestre en rojo
   if (!res.ok) throw new Error(data.message || 'Error en el inicio de sesión');
   return data;
 };
