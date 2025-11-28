@@ -1,4 +1,5 @@
 import express from 'express';
+// IMPORTANTE: Aseguramos que los nombres importados coincidan con el export default de Mongoose
 import Card from '../models/Card.js';
 import Period from '../models/Period.js';
 import Widget from '../models/Widget.js';
@@ -31,7 +32,6 @@ router.post('/cards', async (req, res) => {
   }
 });
 
-// Editar tarjeta
 router.put('/cards/:id', getValidId, async (req, res) => { 
   try {
     const updatedCard = await Card.findByIdAndUpdate(req.params.id, req.body, { new: true });
@@ -42,7 +42,6 @@ router.put('/cards/:id', getValidId, async (req, res) => {
   }
 });
 
-// Eliminar tarjeta
 router.delete('/cards/:id', getValidId, async (req, res) => { 
   try {
     await Card.findByIdAndDelete(req.params.id);
@@ -70,7 +69,6 @@ router.post('/periods', async (req, res) => {
   }
 });
 
-// Actualizar periodo
 router.put('/periods/:id', getValidId, async (req, res) => { 
   try {
     const updatedPeriod = await Period.findByIdAndUpdate(req.params.id, req.body, { new: true });
@@ -81,7 +79,6 @@ router.put('/periods/:id', getValidId, async (req, res) => {
   }
 });
 
-// Eliminar periodo
 router.delete('/periods/:id', getValidId, async (req, res) => { 
   try {
     await Period.findByIdAndDelete(req.params.id);

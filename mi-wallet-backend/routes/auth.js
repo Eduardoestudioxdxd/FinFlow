@@ -1,6 +1,6 @@
 import express from 'express';
 import bcrypt from 'bcryptjs';
-import User from '../models/User.js';
+import User from '../models/User.js'; // Importación corregida
 
 const router = express.Router();
 
@@ -35,11 +35,7 @@ router.post('/login', async (req, res) => {
     const validPass = await bcrypt.compare(req.body.password, user.password);
     if (!validPass) return res.status(400).json({ message: 'Correo o contraseña incorrectos' });
 
-    res.json({ 
-        user: user._id, 
-        name: user.name, 
-        email: user.email 
-    });
+    res.json({ user: user._id, name: user.name, email: user.email });
 
   } catch (error) {
     res.status(400).json({ message: error.message });
