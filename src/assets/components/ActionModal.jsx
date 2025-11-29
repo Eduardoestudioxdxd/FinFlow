@@ -3,7 +3,7 @@ import {
   X, Save, ShoppingCart, Zap, Cigarette, Cat, CreditCard, Tv, Heart, Bike, Pill, Home, Dumbbell, Languages, AlertCircle 
 } from 'lucide-react';
 
-const ActionModal = ({ isOpen, onClose, type, onSave, periods, initialData, cardList }) => {
+const ActionModal = ({ isOpen, onClose, type, onSave, periods, initialData, cardList, defaultPeriodId }) => {
   if (!isOpen) return null;
 
   const AVAILABLE_ICONS = [
@@ -55,8 +55,8 @@ const ActionModal = ({ isOpen, onClose, type, onSave, periods, initialData, card
             name: '', 
             amount: '', 
             limit: '', 
-            // CORRECCIÓN: Usar _id
-            periodId: periods.length > 0 ? periods[0]._id : '', 
+            // Si hay un periodo activo, usarlo, sino el primero
+            periodId: defaultPeriodId || (periods.length > 0 ? periods[0]._id : ''), 
             iconKey: 'super'
         }));
     }
@@ -67,25 +67,34 @@ const ActionModal = ({ isOpen, onClose, type, onSave, periods, initialData, card
     // D) EDITAR PRESUPUESTO
     else if (initialData && type === 'edit-budget') {
        setFormData({ name: initialData.name, amount: initialData.budget, color: initialData.color || '#3B82F6', periodId: '', iconKey: '' });
-    } 
-    // E) DEFAULT (Nuevo Gasto, Ingreso, etc)
+    }
+    // E) EDITAR MOVIMIENTO
+    else if (initialData && type === 'edit-movement') {
+       setFormData({ 
+           name: initialData.name, 
+           amount: initialData.amount, 
+           iconKey: initialData.iconKey, 
+           periodId: initialData.periodId || '', 
+           color: '#334155' 
+        });
+    }
+    // F) DEFAULT (Nuevo Gasto, Ingreso, etc)
     else {
        setFormData({ 
            name: '', amount: '', limit: '', color: '#10B981', 
-           // CORRECCIÓN: Usar _id
-           periodId: periods && periods.length > 0 ? periods[0]._id : '', 
+           // CORRECCIÓN: Usar el defaultPeriodId pasado desde App.jsx
+           periodId: defaultPeriodId || (periods && periods.length > 0 ? periods[0]._id : ''), 
            cardId: '',
            iconKey: 'super', digitos: '', tipo: 'Crédito' 
         });
     }
-  }, [isOpen, type, periods, initialData]);
+  }, [isOpen, type, periods, initialData, defaultPeriodId]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
     onSave({ 
       ...formData, 
-      // CORRECCIÓN CRÍTICA: Usar _id para que el backend reconozca el objeto
-      id: initialData ? (initialData._id || initialData.id) : null,
+      id: initialData ? (initialData.id || initialData._id) : null,
       amount: parseFloat(formData.amount) || 0,
       limit: parseFloat(formData.limit) || 0, 
       type 
@@ -99,6 +108,7 @@ const ActionModal = ({ isOpen, onClose, type, onSave, periods, initialData, card
     if (type === 'card-expense') return `Gasto con ${initialData?.nombre}`;
     if (type === 'card-payment') return `Abonar a ${initialData?.nombre}`;
     if (type === 'edit-budget') return 'Editar Presupuesto';
+    if (type === 'edit-movement') return 'Editar Movimiento';
     if (type === 'budget') return 'Nuevo Presupuesto';
     if (type === 'income') return 'Registrar Ingreso';
     return 'Registrar Gasto';
@@ -176,6 +186,7 @@ const ActionModal = ({ isOpen, onClose, type, onSave, periods, initialData, card
                     className="w-full p-3 rounded-xl border bg-white dark:bg-slate-700 dark:text-white dark:border-slate-600" 
                     value={formData.periodId} 
                     onChange={(e) => setFormData({...formData, periodId: e.target.value})}
+                    disabled={type === 'edit-movement'} 
                 >
                   {/* CORRECCIÓN: Usar _id */}
                   {periods.map(p => <option key={p._id} value={p._id}>{p.name}</option>)}
@@ -184,7 +195,7 @@ const ActionModal = ({ isOpen, onClose, type, onSave, periods, initialData, card
             </div>
           )}
 
-          {/* SELECTOR DE TARJETA (MÉTODO DE PAGO) */}
+          {/* SELECTOR DE TARJETA (MÉTODO DE PAGO) - Solo visible al crear gasto */}
           {type === 'expense' && (
             <div>
               <label className="block text-sm font-medium text-slate-600 dark:text-slate-300 mb-1">Método de Pago:</label>
@@ -195,14 +206,13 @@ const ActionModal = ({ isOpen, onClose, type, onSave, periods, initialData, card
               >
                   <option value="">Efectivo / Otro</option>
                   {cardList && cardList.map(card => (
-                      /* CORRECCIÓN: Usar _id */
                       <option key={card._id} value={card._id}>{card.nombre} (..{card.digitos})</option>
                   ))}
               </select>
             </div>
           )}
 
-          {['expense', 'income', 'card-expense'].includes(type) && (
+          {['expense', 'income', 'card-expense', 'edit-movement'].includes(type) && (
             <div>
               <label className="block text-sm font-medium text-slate-600 dark:text-slate-300 mb-2">Categoría:</label>
               <div className="grid grid-cols-5 gap-2">
