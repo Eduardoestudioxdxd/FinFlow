@@ -126,7 +126,7 @@ const Auth = ({ onLogin }) => {
 
         <div className="mt-6 text-center">
           <p className="text-slate-400 text-sm">
-            {isRegister ? '¿Ya tienes cuenta?' : '¿'}
+            {isRegister ? '¿Ya tienes cuenta?' : ''}
             <button 
                 onClick={() => { setIsRegister(!isRegister); setError(''); }} 
                 className="ml-2 text-emerald-400 hover:text-emerald-300 font-bold hover:underline transition-colors"
