@@ -11,7 +11,7 @@ const ICON_MAP = {
   english: Languages, other: AlertCircle
 };
 
-// NUEVA PROP: onEditMovement
+// PROPS: Añadimos onEditMovement
 function PeriodDetail({ period, onBack, widgets, moveWidget, removeWidget, updateWidgetTitle, onEdit, onDeleteMovement, onEditMovement }) {
   
   const remaining = period.budget - period.spent;
@@ -24,7 +24,6 @@ function PeriodDetail({ period, onBack, widgets, moveWidget, removeWidget, updat
     { name: 'Disponible', value: Math.max(0, remaining), color: colorRemaining }, 
   ];
 
-  // Filtro para evitar que Recharts falle si no hay datos
   const chartData = dataCategorias.filter(d => d.value > 0);
   const hasData = chartData.length > 0;
 
@@ -35,7 +34,7 @@ function PeriodDetail({ period, onBack, widgets, moveWidget, removeWidget, updat
         <ArrowLeft size={20} /> Volver a Presupuestos
       </button>
 
-      {/* TARJETA DE RESUMEN (Sin cambios) */}
+      {/* TARJETA DE RESUMEN */}
       <div className="bg-gradient-to-r from-blue-900 to-slate-900 rounded-[2rem] p-8 text-white shadow-2xl relative overflow-hidden group">
             <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/10 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none"></div>
             <div className="flex justify-between items-start">
@@ -138,11 +137,15 @@ function PeriodDetail({ period, onBack, widgets, moveWidget, removeWidget, updat
             {widget.type === 'recent' && (
                 <div className="space-y-3 mt-2">
                     {period.movements && period.movements.length > 0 ? (
-                        period.movements.map((mov) => {
+                        // Usamos map con index para tener un identificador seguro
+                        period.movements.map((mov, i) => {
                             const IconComponent = ICON_MAP[mov.iconKey] || AlertCircle;
                             const isIncome = mov.type === 'income';
+                            // Usamos un key combinado para React
+                            const uniqueKey = mov.id || `idx-${i}`;
+
                             return (
-                                <div key={mov.id} className="relative flex items-center justify-between p-4 bg-gray-50 dark:bg-slate-900/50 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-xl transition-colors border border-transparent hover:border-emerald-500/20 group/item">
+                                <div key={uniqueKey} className="relative flex items-center justify-between p-4 bg-gray-50 dark:bg-slate-900/50 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-xl transition-colors border border-transparent hover:border-emerald-500/20 group/item">
                                     <div className="flex items-center gap-4">
                                         <div className={`w-10 h-10 rounded-full flex items-center justify-center text-lg shadow-sm transition-transform group-hover/item:scale-110 ${isIncome ? 'bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-400' : 'bg-orange-100 text-orange-600 dark:bg-orange-500/20 dark:text-orange-400'}`}>
                                             <IconComponent size={18} />
@@ -157,17 +160,17 @@ function PeriodDetail({ period, onBack, widgets, moveWidget, removeWidget, updat
                                         <span className={`font-bold text-sm mr-2 ${isIncome ? 'text-emerald-500' : 'text-slate-700 dark:text-slate-300'}`}>
                                             {isIncome ? '+' : '-'}${mov.amount.toFixed(2)}
                                         </span>
-                                        {/* BOTONES DE ACCIÓN (SOLO VISIBLE AL HACER HOVER) */}
                                         <div className="flex gap-1 opacity-0 group-hover/item:opacity-100 transition-opacity">
                                             <button 
-                                                onClick={() => onEditMovement(mov)}
+                                                onClick={() => onEditMovement(mov, i)} 
                                                 className="p-1.5 text-gray-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-500/10 rounded-lg transition-all"
                                                 title="Editar movimiento"
                                             >
                                                 <Edit3 size={16} />
                                             </button>
                                             <button 
-                                                onClick={() => onDeleteMovement(mov.id)}
+                                                // CORRECCIÓN: Enviamos el ÍNDICE (i) como segundo argumento
+                                                onClick={() => onDeleteMovement(mov.id, i)}
                                                 className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-lg transition-all"
                                                 title="Borrar movimiento"
                                             >

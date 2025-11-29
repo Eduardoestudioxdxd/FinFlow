@@ -71,15 +71,20 @@ function App() {
                   needsUpdate = true;
               }
 
+              // REPARACIÓN DE IDs AL CARGAR
               if (p.movements && p.movements.length > 0) {
-                  const movementsWithId = p.movements.map(m => {
-                      if (!m.id) {
+                  const seenIds = new Set();
+                  updatedMovements = p.movements.map((m, index) => {
+                      // Si no tiene ID, o si el ID ya está en el set (duplicado)
+                      if (!m.id || seenIds.has(m.id)) {
                           needsUpdate = true;
-                          return { ...m, id: Math.floor(Math.random() * 1000000000) }; 
+                          const newId = Date.now() + index + Math.floor(Math.random() * 1000000);
+                          seenIds.add(newId);
+                          return { ...m, id: newId };
                       }
+                      seenIds.add(m.id);
                       return m;
                   });
-                  updatedMovements = movementsWithId;
               }
 
               if (needsUpdate) {
@@ -115,8 +120,6 @@ function App() {
   const dashboardBalance = dashboardBudget - dashboardSpent;
   const dashboardMovements = currentDashboardPeriod ? [...currentDashboardPeriod.movements].reverse().slice(0, 3) : [];
 
-  // --- LÓGICA DE SELECCIÓN AUTOMÁTICA DEL PERIODO ---
-  // Si estamos en "Presupuestos" y hay uno seleccionado, usa ese. Si no, usa el del Dashboard.
   const activePeriodForModal = (activeTab === 'quincenas' && selectedPeriodId) ? selectedPeriodId : dashboardPeriodId;
 
   useEffect(() => {
@@ -164,29 +167,42 @@ function App() {
         else if (data.type === 'edit-movement') {
             const period = periods.find(p => p._id === data.periodId); 
             if (period) {
+                // Aquí usamos el index si el ID falla, pero por ahora confiamos en el ID reparado
                 const movIndex = period.movements.findIndex(m => m.id === data.id);
+                
+                // Fallback: si no encuentra por ID, intentar por "index" si se pasara (pero edit usa ID)
                 if (movIndex > -1) {
                     const oldMov = period.movements[movIndex];
-                    let newSpent = period.spent;
-                    let newBudget = period.budget;
-
-                    if (oldMov.type === 'expense') newSpent -= oldMov.amount;
-                    else if (oldMov.type === 'income') newBudget -= oldMov.amount;
-
-                    if (oldMov.type === 'expense') newSpent += data.amount;
-                    else if (oldMov.type === 'income') newBudget += data.amount;
-
+                    
                     const updatedMovement = { 
-                        ...oldMov, 
+                        ...period.movements[movIndex], 
                         name: data.name, 
-                        amount: data.amount, 
+                        amount: Number(data.amount), 
                         iconKey: data.iconKey 
                     };
                     
-                    const updatedMovements = [...period.movements];
-                    updatedMovements[movIndex] = updatedMovement;
+                    const newMovements = [...period.movements];
+                    newMovements[movIndex] = updatedMovement;
 
-                    const updatedPeriodData = { ...period, budget: newBudget, spent: Math.max(0, newSpent), movements: updatedMovements };
+                    // Recalcular TOTALMENTE para evitar errores de arrastre
+                    const recalculatedSpent = newMovements
+                        .filter(m => m.type === 'expense' || m.type === 'card-expense')
+                        .reduce((acc, m) => acc + Number(m.amount), 0);
+
+                    let newBudget = period.budget;
+                    if (updatedMovement.type === 'income') {
+                         // Si es ingreso, ajustamos
+                         // (Simplificación: ingreso anterior + ingreso nuevo)
+                         const diff = Number(data.amount) - Number(oldMov.amount);
+                         newBudget += diff;
+                    }
+
+                    const updatedPeriodData = { 
+                        ...period, 
+                        budget: newBudget, 
+                        spent: recalculatedSpent, 
+                        movements: newMovements 
+                    };
                     const res = await api.updatePeriod(period._id, updatedPeriodData);
                     setPeriods(periods.map(p => p._id === period._id ? res : p));
                     success = true;
@@ -211,8 +227,8 @@ function App() {
                 if (period) {
                     let newSpent = period.spent; 
                     let newBudget = period.budget;
-                    if (data.type === 'expense' || data.type === 'card-expense') newSpent += data.amount; 
-                    else if (data.type === 'income') newBudget += data.amount;
+                    if (data.type === 'expense' || data.type === 'card-expense') newSpent += Number(data.amount); 
+                    else if (data.type === 'income') newBudget += Number(data.amount);
                     
                     let finalName = data.name; 
                     const cardIdUsed = data.cardId || (data.type === 'card-expense' ? editingData?._id : null);
@@ -221,10 +237,11 @@ function App() {
                         if (c) finalName = `${data.name} (${c.nombre})`; 
                     }
                     
+                    // ID ÚNICO: Tiempo + Random Grande
                     const newMovement = { 
-                        id: Date.now(), 
+                        id: Date.now() + Math.floor(Math.random() * 1000000), 
                         name: finalName, 
-                        amount: data.amount, 
+                        amount: Number(data.amount), 
                         type: data.type === 'card-expense' ? 'expense' : data.type, 
                         date: new Date().toLocaleDateString('es-ES', { day: 'numeric', month: 'short' }), 
                         iconKey: data.iconKey, 
@@ -270,29 +287,50 @@ function App() {
       setIsModalOpen(true);
   };
 
-  const deleteMovement = async (periodId, movementId) => { 
+  // --- FUNCIÓN DE BORRADO DEFINITIVA (POR ÍNDICE) ---
+  const deleteMovement = async (periodId, movementId, movementIndex) => { 
         if (!confirm("¿Borrar movimiento? Se reintegrará el valor.")) return; 
         setIsLoading(true); 
         try { 
             const period = periods.find(p => p._id === periodId); 
             if (period) { 
-                const movement = period.movements.find(m => m.id === movementId);
-                if (movement) { 
-                    let newSpent = period.spent; 
-                    let newBudget = period.budget; 
+                
+                // 1. Usamos SPLICE para asegurar que borramos SOLO UNO, el de ese índice exacto
+                const newMovements = [...period.movements];
+                
+                // Validamos que el índice sea correcto
+                if (movementIndex >= 0 && movementIndex < newMovements.length) {
+                    const deletedMov = newMovements[movementIndex];
+
+                    // Verificar si el ID coincide (seguridad extra), si no, confiamos en el index
+                    // Si los IDs están duplicados, el index es la única verdad.
                     
-                    if (movement.type === 'expense') newSpent -= movement.amount; 
-                    else if (movement.type === 'income') newBudget -= movement.amount; 
-                    
+                    // Eliminar por índice (solo 1 elemento)
+                    newMovements.splice(movementIndex, 1);
+
+                    // 2. RECALCULAR 'SPENT' DESDE CERO
+                    const recalculatedSpent = newMovements
+                        .filter(m => m.type === 'expense' || m.type === 'card-expense')
+                        .reduce((acc, m) => acc + Number(m.amount), 0);
+
+                    // 3. Ajustar Budget si se borró un ingreso
+                    let newBudget = period.budget;
+                    if (deletedMov.type === 'income') {
+                        newBudget -= Number(deletedMov.amount);
+                    }
+
                     const updatedPeriodData = { 
                         ...period, 
-                        spent: Math.max(0, newSpent), 
+                        spent: recalculatedSpent, 
                         budget: newBudget, 
-                        movements: period.movements.filter(m => m.id !== movementId) 
+                        movements: newMovements 
                     }; 
+
                     const res = await api.updatePeriod(periodId, updatedPeriodData); 
                     setPeriods(periods.map(p => p._id === periodId ? res : p)); 
                     fetchData(); 
+                } else {
+                    console.error("Índice de movimiento inválido:", movementIndex);
                 }
             } 
         } catch(e) { console.error(e); } finally { setIsLoading(false); } 
@@ -416,7 +454,7 @@ function App() {
                         period={periods.find(p => p._id === selectedPeriodId)} 
                         onBack={() => setSelectedPeriodId(null)} 
                         onEdit={() => openEditModal(periods.find(p => p._id === selectedPeriodId))} 
-                        onDeleteMovement={(movId) => deleteMovement(selectedPeriodId, movId)}
+                        onDeleteMovement={(movId, index) => deleteMovement(selectedPeriodId, movId, index)}
                         onEditMovement={(mov) => handleEditMovement(selectedPeriodId, mov)}
                         widgets={periods.find(p => p._id === selectedPeriodId).widgets || []} 
                         moveWidget={(idx, dir) => movePeriodWidget(selectedPeriodId, idx, dir)} 

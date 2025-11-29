@@ -49,7 +49,9 @@ function Wallet({ tarjetas, totalGastado, onAddCard, onEditCard, onDeleteCard, o
                     tarjetasFiltradas.map((tarjeta) => {
                         const hasLimit = tarjeta.limit > 0;
                         const disponible = hasLimit ? tarjeta.limit - tarjeta.gasto : 0;
-                        const porcentajeUso = hasLimit ? Math.min((tarjeta.gasto / tarjeta.limit) * 100, 100) : 0;
+                        
+                        // FIX: Math.max(0, ...) asegura que si el gasto es negativo (saldo a favor), la barra muestre 0% y no se rompa
+                        const porcentajeUso = hasLimit ? Math.max(0, Math.min((tarjeta.gasto / tarjeta.limit) * 100, 100)) : 0;
                         const esCritico = porcentajeUso > 90;
 
                         return (
