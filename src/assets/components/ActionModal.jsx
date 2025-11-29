@@ -3,7 +3,6 @@ import {
   X, Save, ShoppingCart, Zap, Cigarette, Cat, CreditCard, Tv, Heart, Bike, Pill, Home, Dumbbell, Languages, AlertCircle 
 } from 'lucide-react';
 
-// AHORA RECIBIMOS "cardList" TAMBIÉN
 const ActionModal = ({ isOpen, onClose, type, onSave, periods, initialData, cardList }) => {
   if (!isOpen) return null;
 
@@ -31,7 +30,7 @@ const ActionModal = ({ isOpen, onClose, type, onSave, periods, initialData, card
     limit: '', 
     color: '#334155', 
     periodId: '',
-    cardId: '', // NUEVO: ID de la tarjeta seleccionada
+    cardId: '',
     iconKey: 'super',
     digitos: '',
     tipo: 'Crédito'
@@ -52,7 +51,13 @@ const ActionModal = ({ isOpen, onClose, type, onSave, periods, initialData, card
     // B) MODO GASTO/PAGO TARJETA DIRECTO
     else if ((type === 'card-expense' || type === 'card-payment') && initialData) {
         setFormData(prev => ({
-            ...prev, name: '', amount: '', limit: '', periodId: periods.length > 0 ? periods[0].id : '', iconKey: 'super'
+            ...prev, 
+            name: '', 
+            amount: '', 
+            limit: '', 
+            // CORRECCIÓN: Usar _id
+            periodId: periods.length > 0 ? periods[0]._id : '', 
+            iconKey: 'super'
         }));
     }
     // C) MODO CREAR TARJETA
@@ -67,8 +72,9 @@ const ActionModal = ({ isOpen, onClose, type, onSave, periods, initialData, card
     else {
        setFormData({ 
            name: '', amount: '', limit: '', color: '#10B981', 
-           periodId: periods && periods.length > 0 ? periods[0].id : '', 
-           cardId: '', // Por defecto vacío (Efectivo)
+           // CORRECCIÓN: Usar _id
+           periodId: periods && periods.length > 0 ? periods[0]._id : '', 
+           cardId: '',
            iconKey: 'super', digitos: '', tipo: 'Crédito' 
         });
     }
@@ -78,7 +84,8 @@ const ActionModal = ({ isOpen, onClose, type, onSave, periods, initialData, card
     e.preventDefault();
     onSave({ 
       ...formData, 
-      id: initialData ? initialData.id : null,
+      // CORRECCIÓN CRÍTICA: Usar _id para que el backend reconozca el objeto
+      id: initialData ? (initialData._id || initialData.id) : null,
       amount: parseFloat(formData.amount) || 0,
       limit: parseFloat(formData.limit) || 0, 
       type 
@@ -94,7 +101,7 @@ const ActionModal = ({ isOpen, onClose, type, onSave, periods, initialData, card
     if (type === 'edit-budget') return 'Editar Presupuesto';
     if (type === 'budget') return 'Nuevo Presupuesto';
     if (type === 'income') return 'Registrar Ingreso';
-    return 'Registrar Gasto'; // Gasto General
+    return 'Registrar Gasto';
   };
 
   return (
@@ -160,20 +167,24 @@ const ActionModal = ({ isOpen, onClose, type, onSave, periods, initialData, card
               </div>
           )}
           
-          {/* SELECTOR DE PRESUPUESTO (Para asignar el gasto a un mes) */}
+          {/* SELECTOR DE PRESUPUESTO */}
           {['card-expense', 'expense', 'income'].includes(type) && (
             <div>
               <label className="block text-sm font-medium text-slate-600 dark:text-slate-300 mb-1">Asignar al Presupuesto de:</label>
               {periods.length > 0 ? (
-                <select className="w-full p-3 rounded-xl border bg-white dark:bg-slate-700 dark:text-white dark:border-slate-600" value={formData.periodId} onChange={(e) => setFormData({...formData, periodId: e.target.value})}>
-                  {periods.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                <select 
+                    className="w-full p-3 rounded-xl border bg-white dark:bg-slate-700 dark:text-white dark:border-slate-600" 
+                    value={formData.periodId} 
+                    onChange={(e) => setFormData({...formData, periodId: e.target.value})}
+                >
+                  {/* CORRECCIÓN: Usar _id */}
+                  {periods.map(p => <option key={p._id} value={p._id}>{p.name}</option>)}
                 </select>
               ) : <p className="text-red-500 text-sm">No hay presupuestos disponibles.</p>}
             </div>
           )}
 
-          {/* --- NUEVO: SELECTOR DE TARJETA (MÉTODO DE PAGO) --- */}
-          {/* Solo se muestra en GASTOS (expense) generales, no en ingresos ni en gastos directos de tarjeta */}
+          {/* SELECTOR DE TARJETA (MÉTODO DE PAGO) */}
           {type === 'expense' && (
             <div>
               <label className="block text-sm font-medium text-slate-600 dark:text-slate-300 mb-1">Método de Pago:</label>
@@ -184,7 +195,8 @@ const ActionModal = ({ isOpen, onClose, type, onSave, periods, initialData, card
               >
                   <option value="">Efectivo / Otro</option>
                   {cardList && cardList.map(card => (
-                      <option key={card.id} value={card.id}>{card.nombre} (..{card.digitos})</option>
+                      /* CORRECCIÓN: Usar _id */
+                      <option key={card._id} value={card._id}>{card.nombre} (..{card.digitos})</option>
                   ))}
               </select>
             </div>

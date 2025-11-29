@@ -15,7 +15,6 @@ const ICON_MAP = {
 // Función de ayuda para generar un ID aleatorio si el _id no existe (para evitar warnings)
 const generateId = () => Math.random().toString(36).substring(2, 9);
 
-
 function Dashboard({ 
     widgets, totalGastado, 
     // NUEVAS PROPS PARA EL SELECTOR
@@ -131,11 +130,19 @@ function Dashboard({
                     <button className="text-gray-400 hover:text-white"><MoreHorizontal size={20}/></button>
                 </div>
                 <div className="flex flex-col sm:flex-row items-center gap-8">
-                    <div className="h-48 w-48 relative">
+                    {/* CORRECCIÓN DE DIMENSIONES: w-48 h-48 para forzar el tamaño */}
+                    <div className="h-48 w-48 relative"> 
                         {hasData ? (
                             <ResponsiveContainer width="100%" height="100%" key={selectedPeriodId || 'default'}> 
                                 <PieChart>
-                                    <Pie data={chartData} innerRadius={60} outerRadius={80} paddingAngle={5} dataKey="value" stroke="none">
+                                    <Pie 
+                                            data={chartData} 
+                                            innerRadius={60} 
+                                            outerRadius={80} 
+                                            paddingAngle={5} 
+                                            dataKey="value" 
+                                            stroke="none"
+                                        >
                                         {chartData.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.color} />)}
                                     </Pie>
                                     <Tooltip />
@@ -232,5 +239,4 @@ function Dashboard({
     </div>
   );
 }
-
 export default Dashboard;

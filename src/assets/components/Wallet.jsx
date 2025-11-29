@@ -15,7 +15,7 @@ function Wallet({ tarjetas, totalGastado, onAddCard, onEditCard, onDeleteCard, o
   return (
     <div className="animate-fade-in space-y-6">
         
-        {/* BARRA DE HERRAMIENTAS... (Igual) */}
+        {/* BARRA DE HERRAMIENTAS */}
         <div className="flex flex-col md:flex-row justify-between items-center gap-4 bg-white dark:bg-[#1e293b] p-4 rounded-2xl shadow-sm border border-gray-100 dark:border-white/5">
             <div className="relative w-full md:w-96">
                 <Search className="absolute left-3 top-3.5 text-gray-400" size={18} />
@@ -29,7 +29,7 @@ function Wallet({ tarjetas, totalGastado, onAddCard, onEditCard, onDeleteCard, o
 
         <div className="flex flex-col lg:flex-row gap-8">
             
-            {/* GRÁFICO... (Igual) */}
+            {/* GRÁFICO DEUDA TOTAL */}
             <div className="lg:w-1/3 bg-white dark:bg-[#1e293b] rounded-[2rem] p-8 shadow-xl border border-gray-100 dark:border-white/5 flex flex-col items-center justify-center relative min-h-[400px]">
                 <h3 className="absolute top-8 left-8 font-bold text-xl dark:text-white">Deuda Total</h3>
                 <div className="w-64 h-64 relative">
@@ -53,7 +53,8 @@ function Wallet({ tarjetas, totalGastado, onAddCard, onEditCard, onDeleteCard, o
                         const esCritico = porcentajeUso > 90;
 
                         return (
-                            <div key={tarjeta.id} className={`group bg-white dark:bg-[#1e293b] p-5 rounded-2xl shadow-sm border ${esCritico ? 'border-red-500/50 dark:border-red-500/30' : 'border-gray-100 dark:border-white/5'} flex flex-col gap-4 hover:border-emerald-500/50 transition-all`}>
+                            // CORRECCIÓN: Usar _id
+                            <div key={tarjeta._id} className={`group bg-white dark:bg-[#1e293b] p-5 rounded-2xl shadow-sm border ${esCritico ? 'border-red-500/50 dark:border-red-500/30' : 'border-gray-100 dark:border-white/5'} flex flex-col gap-4 hover:border-emerald-500/50 transition-all`}>
                                 
                                 <div className="flex flex-col sm:flex-row items-center justify-between gap-6">
                                     <div className="flex items-center gap-4 w-full sm:w-auto">
@@ -82,7 +83,6 @@ function Wallet({ tarjetas, totalGastado, onAddCard, onEditCard, onDeleteCard, o
                                                 className={`h-full rounded-full transition-all duration-700 ${esCritico ? 'bg-red-500' : ''}`}
                                                 style={{ 
                                                     width: hasLimit ? `${porcentajeUso}%` : '0%',
-                                                    // Si no es crítico, usa el color de la tarjeta. Si es crítico, se pone rojo (por la clase bg-red-500 arriba)
                                                     backgroundColor: !esCritico ? tarjeta.color : undefined 
                                                 }}
                                             ></div>
@@ -97,7 +97,8 @@ function Wallet({ tarjetas, totalGastado, onAddCard, onEditCard, onDeleteCard, o
 
                                     <div className="flex gap-2 w-full sm:w-auto justify-end opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity">
                                         <button onClick={() => onEditCard(tarjeta)} className="p-2 text-gray-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-500/10 rounded-lg transition-colors"><Edit3 size={18} /></button>
-                                        <button onClick={() => onDeleteCard(tarjeta.id)} className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-lg transition-colors"><Trash2 size={18} /></button>
+                                        {/* CORRECCIÓN: Usar _id */}
+                                        <button onClick={() => onDeleteCard(tarjeta._id)} className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-lg transition-colors"><Trash2 size={18} /></button>
                                     </div>
                                 </div>
 
